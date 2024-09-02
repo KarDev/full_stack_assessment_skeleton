@@ -358,6 +358,9 @@ docker-compose -f docker-compose.initial.yml up --build -d
 
 ### solution
 
+- **Framework Used:** Nest.js
+- **ORM:** TypeORM
+
 ## Key Problem Solving Points
 
 ### 1. Database Structure and Relationships
