@@ -120,9 +120,9 @@ const HomeListing: React.FC<HomeListingProps> = ({
                 {home.state}, {home.zip}
               </p>
               <div className="flex justify-between text-sm text-gray-500 mb-2">
-                <span>{home.beds} beds</span>
-                <span>{home.baths} baths</span>
-                <span>{home.sqft.toFixed(0)} sqft</span>
+                <span>{home.beds} Beds</span>
+                <span>{home.baths} Baths</span>
+                <span>{home.sqft.toFixed(0)} Sqft.</span>
               </div>
               <p className="text-lg font-bold text-indigo-600 mb-2">
                 ${home.list_price.toLocaleString()}
@@ -139,7 +139,7 @@ const HomeListing: React.FC<HomeListingProps> = ({
       </div>
 
       {selectedHome && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50  w-full flex items-center justify-center">
           <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">
               Users for {selectedHome.street_address}
