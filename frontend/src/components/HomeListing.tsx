@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchUsersByHomeId, updateHomeUsers } from "../utils/api";
 
@@ -42,27 +42,49 @@ const HomeListing: React.FC<HomeListingProps> = ({
   const { data: selectedHomeUsers, isLoading: isLoadingHomeUsers } = useQuery({
     queryKey: ["homeUsers", selectedHome?.uniqueId],
     queryFn: () => fetchUsersByHomeId(selectedHome!.uniqueId),
+    enabled: !!selectedHome?.uniqueId,
   });
 
   useEffect(() => {
-    console.log("selectedHomeUsers", selectedHomeUsers, users);
-    const updatedUsers = users.map((user) => {
-      if (
-        selectedHomeUsers?.data?.some(
-          (homeUser: User) => homeUser.id === user.id
-        )
-      ) {
-        console.log("user", { ...user, isSelected: true });
+    if (selectedHomeUsers) {
+      const updatedUsers = users.map((user) => {
+        return {
+          ...user,
+          isSelected: selectedHomeUsers.data.some(
+            (homeUser: User) => homeUser.id === user.id
+          ),
+        };
+      });
+      setAllUsers(updatedUsers);
+    }
+  }, [selectedHomeUsers, users]);
 
-        return { ...user, isSelected: true };
-      }
-      return user;
-    });
+  const openModal = useCallback((home: Home) => {
+    setSelectedHome(home);
+  }, []);
 
-    console.log("upDated", updatedUsers);
+  const closeModal = useCallback(() => {
+    setSelectedHome(null);
+    setErrorUsers("");
+  }, []);
 
-    setAllUsers(updatedUsers);
-  }, [selectedHomeUsers]);
+  const validateUsers = useCallback((): boolean => {
+    setErrorUsers("");
+    const isValid = allUsers.some((user) => user.isSelected);
+    if (!isValid) {
+      setErrorUsers("Please select at least one user.");
+    }
+    return isValid;
+  }, [allUsers]);
+
+  const handleUpdateHomeUser = useCallback(async () => {
+    if (!validateUsers()) return;
+    const selectedUserIds = allUsers
+      .filter((user) => user.isSelected)
+      .map((user) => user.id);
+    await updateHomeUsers(selectedHome!.uniqueId, selectedUserIds);
+    closeModal();
+  }, [allUsers, selectedHome, closeModal, validateUsers]);
 
   if (isLoading) {
     return <div className="text-center">Loading homes...</div>;
@@ -72,36 +94,14 @@ const HomeListing: React.FC<HomeListingProps> = ({
     return <div className="text-center">No homes found for this user.</div>;
   }
 
-  const openModal = (home: Home) => {
-    setSelectedHome(home);
-  };
-
-  const closeModal = () => {
-    setSelectedHome(null);
-  };
-
-  const validateUsers = () => {
-    setErrorUsers("");
-
-    const isValid = allUsers.some((user: User) => user.isSelected);
-
-    if (!isValid) {
-      setErrorUsers("Please select at least one user.");
-    }
-
-    return isValid;
-  };
-
-  const handleUpdateHomeUser = async () => {
-    if (!validateUsers()) return;
-
-    const selectedUserIds = allUsers
-      .filter((user: User) => user.isSelected)
-      .map((user: User) => user.id);
-
-    await updateHomeUsers(selectedHome!.uniqueId, selectedUserIds);
-
-    closeModal();
+  const handleUserSelection = (userId: string) => {
+    setAllUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.uniqueId === userId
+          ? { ...user, isSelected: !user.isSelected }
+          : user
+      )
+    );
   };
 
   return (
@@ -139,7 +139,7 @@ const HomeListing: React.FC<HomeListingProps> = ({
       </div>
 
       {selectedHome && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50  w-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 w-full flex items-center justify-center">
           <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">
               Users for {selectedHome.street_address}
@@ -148,13 +148,13 @@ const HomeListing: React.FC<HomeListingProps> = ({
               <p>Loading users...</p>
             ) : (
               <div className="max-h-60 overflow-y-auto">
-                {allUsers?.map((user: User) => (
+                {allUsers.map((user) => (
                   <div key={user.uniqueId} className="mb-2 flex items-center">
                     <input
                       type="checkbox"
                       id={user.uniqueId}
-                      defaultChecked={user.isSelected}
-                      onChange={() => (user.isSelected = !user.isSelected)}
+                      checked={user.isSelected}
+                      onChange={() => handleUserSelection(user.uniqueId)}
                       className="mr-2"
                     />
                     <label htmlFor={user.uniqueId}>
@@ -180,7 +180,6 @@ const HomeListing: React.FC<HomeListingProps> = ({
               <button
                 onClick={handleUpdateHomeUser}
                 className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300"
-                disabled={!!errorUsers}
               >
                 Save Changes
               </button>
